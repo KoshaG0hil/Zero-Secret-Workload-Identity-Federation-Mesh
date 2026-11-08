@@ -1,0 +1,43 @@
+name: Continuous Integration & Security Verification
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-verify:
+    name: Run Pytest Suite & Cryptographic Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Test Suite with Pytest
+        run: |
+          pytest tests -v --cov=src --cov-report=term-missing
+
+      - name: Verify CLI Functionality
+        run: |
+          python cli.py audit
+          python cli.py attest --name payment-service --namespace prod --service-account payment-service
+          python cli.py federate
+          python cli.py rotate --count 3
+          python cli.py jwks
